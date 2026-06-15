@@ -61,19 +61,8 @@ The first column of the speed files must contain timestamps. The remaining colum
 
 Commercial API outputs and private datasets are not included in this repository. Users should provide their own reference speed data or use a synthetic/sample file with the same schema.
 
-## Installation
 
-```bash
-pip install -r requirements.txt
-```
-
-## Running the model
-
-```bash
-python src/main.py
-```
-
-Outputs are written to:
+## Outputs are written to:
 
 ```text
 outputs/
