@@ -20,7 +20,7 @@ src/
     scaling.py
     prepare.py
 
-  models/
+  model/
     factory.py
     dual_branch_stgcnn.py
 
