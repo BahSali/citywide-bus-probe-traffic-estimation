@@ -39,10 +39,11 @@ class SplitConfig:
 
 @dataclass(frozen=True)
 class FeatureConfig:
-    recent_steps: int = 4
-    daily_lag: bool = True
-    weekly_lag: bool = True
-    similar_days: int = 2
+    recent_steps: int = 8
+    daily_lags: int = 2
+    weekly_lags: int = 1
+    similar_days: int = 1
+    similarity_metric: str = "cosine"
     pad_value: float = 0.0
 
 
@@ -56,26 +57,30 @@ class NormalizationConfig:
 @dataclass(frozen=True)
 class ModelConfig:
     hidden_dim: int = 64
-    residual_scale: float = 2.0
-    topk: int = 4
+    num_blocks: int = 2
+    temporal_kernel_size: int = 3
+    attention_dim: int = 64
+    diffusion_hops: int = 2
+    base_window: int = 4
+    residual_topk: int = 2
     enforce_nonnegative: bool = False
 
 
 @dataclass(frozen=True)
 class TrainingConfig:
     epochs: int = 20
+    batch_size: int = 32
     learning_rate: float = 1e-3
     patience: int = 5
     min_delta: float = 0.0
     delta_loss_weight: float = 0.0
-    smoothness_weight: float = 0.0
     prefer_mps: bool = True
 
 
 @dataclass(frozen=True)
 class OutputConfig:
     output_dir: Path = ROOT / "outputs"
-    prediction_filename: str = "final_results.csv"
+    prediction_filename: str = "predictions.csv"
     checkpoint_filename: str = "model.pt"
 
     @property
