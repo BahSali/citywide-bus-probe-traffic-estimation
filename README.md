@@ -94,8 +94,3 @@ Output shape:
 [batch_size, num_segments]
 ```
 
-The estimate corresponds to the last timestamp of each input window. Stacking the per-timestamp estimates over all windows yields the full estimated speed series.
-
-## Notes
-
-This repository is intended to support reproducibility of the proposed method. It does not redistribute commercial reference-speed data or API responses.
