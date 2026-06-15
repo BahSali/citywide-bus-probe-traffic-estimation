@@ -1,150 +1,102 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
 from pathlib import Path
 
-# --------------------------------------------------
-# Roots
-# --------------------------------------------------
 
-MODEL_ROOT = Path(__file__).resolve().parent
-PROJECT_ROOT = MODEL_ROOT.parent
+ROOT = Path(__file__).resolve().parents[1]
 
-# --------------------------------------------------
-# Data paths
-# --------------------------------------------------
 
-STIB_CSV = PROJECT_ROOT / "STIB_timeseries_collector" / "Merged_Dataset" / "0.STIB_speeds.csv"
-GOOGLE_CSV = PROJECT_ROOT / "Google_timeseries_collector" / "Merged_Dataset" / "0.speeds.csv"
+@dataclass(frozen=True)
+class DataConfig:
+    data_dir: Path = ROOT / "data"
+    stib_filename: str = "stib_speeds.csv"
+    reference_filename: str = "reference_speeds.csv"
+    adjacency_filename: str = "adjacency.csv"
 
-# --------------------------------------------------
-# Results
-# --------------------------------------------------
+    @property
+    def stib_path(self) -> Path:
+        return self.data_dir / self.stib_filename
 
-RESULTS_ROOT = PROJECT_ROOT / "Model_SIG2026" / "results"
-RESULTS_ROOT.mkdir(parents=True, exist_ok=True)
+    @property
+    def reference_path(self) -> Path:
+        return self.data_dir / self.reference_filename
 
-FINAL_PREDICTION_CSV = RESULTS_ROOT / "google_speed_predictions.csv"
+    @property
+    def adjacency_path(self) -> Path:
+        return self.data_dir / self.adjacency_filename
 
-# --------------------------------------------------
-# Training config
-# --------------------------------------------------
 
-WINDOW_SIZE = 8
-EPOCHS = 20
-LEARNING_RATE = 1e-3
+@dataclass(frozen=True)
+class SplitConfig:
+    strategy: str = "by_days"
+    train_ratio: float = 0.70
+    val_ratio: float = 0.15
+    val_days: int = 2
+    test_days: int = 3
+    min_observed_targets: int = 1
 
-USE_MPS_IF_AVAILABLE = True
 
-# --------------------------------------------------
-# Split config
-# --------------------------------------------------
-TRAIN_RATIO = 0.70
-VAL_RATIO = 0.15   # test = 1 - train - val
-MIN_GOOGLE_OBS_PER_ROW = 1  # Minimum required observed Google values per timestamp.
+@dataclass(frozen=True)
+class FeatureConfig:
+    recent_steps: int = 4
+    daily_lag: bool = True
+    weekly_lag: bool = True
+    similar_days: int = 2
+    pad_value: float = 0.0
 
-# Split strategy
-SPLIT_STRATEGY = "by_days"   # options: "ratio", "by_days"
 
-# If SPLIT_STRATEGY == "by_days":
-TEST_DAYS = 3               # last N full days as test
-VAL_DAYS = 2                # days right before test as validation
+@dataclass(frozen=True)
+class NormalizationConfig:
+    input: bool = True
+    target: bool = True
+    eps: float = 1e-6
 
-# --------------------------------------------------
-# Model checkpoints
-# --------------------------------------------------
-CHECKPOINT_ROOT = PROJECT_ROOT / "Model_SIG2026"
-CHECKPOINT_ROOT.mkdir(parents=True, exist_ok=True)
 
-MODEL_CHECKPOINT = CHECKPOINT_ROOT / "cnn_trained model.pt"
+@dataclass(frozen=True)
+class ModelConfig:
+    hidden_dim: int = 64
+    residual_scale: float = 2.0
+    topk: int = 4
+    enforce_nonnegative: bool = False
 
-# --------------------------------------------------
-# Temporal feature configuration
-# --------------------------------------------------
-RECENT_STEPS = 4              # intra-day frames (same day only)
 
-USE_DAILY_LAG = True          # t - 1 day
-USE_WEEKLY_LAG = True         # t - 7 days
+@dataclass(frozen=True)
+class TrainingConfig:
+    epochs: int = 20
+    learning_rate: float = 1e-3
+    patience: int = 5
+    min_delta: float = 0.0
+    delta_loss_weight: float = 0.0
+    smoothness_weight: float = 0.0
+    prefer_mps: bool = True
 
-USE_SIMILAR_DAY = True        # similarity-based historical days
-NUM_SIMILAR_DAYS = 2          # how many similar weekdays to include
 
-PADDING_VALUE = 0.0
+@dataclass(frozen=True)
+class OutputConfig:
+    output_dir: Path = ROOT / "outputs"
+    prediction_filename: str = "final_results.csv"
+    checkpoint_filename: str = "model.pt"
 
-# --------------------------------------------------
-# Early stopping / checkpoint selection
-# --------------------------------------------------
-EARLY_STOPPING = True
-PATIENCE = 5
-MIN_DELTA = 0.0  # minimum change in validation loss to qualify as an improvement
+    @property
+    def prediction_path(self) -> Path:
+        return self.output_dir / self.prediction_filename
 
-# --------------------------------------------------
-# Normalization
-# --------------------------------------------------
-USE_NORMALIZATION = True
-NORMALIZATION_EPS = 1e-6
-NORMALIZE_TARGET = True  # Google speeds
-NORMALIZE_INPUT = True   # STIB speeds
-LAMBDA_SMOOTH = 0.0
+    @property
+    def checkpoint_path(self) -> Path:
+        return self.output_dir / self.checkpoint_filename
 
-VAR_SCALE_RAW = 5.0
-VAR_SCALE_NORM = 2.0
 
-# --------------------------------------------------
-# Loss
-# --------------------------------------------------
-LAMBDA_SMOOTH = 0.0   # keep OFF if you do not want smoothing
-LAMBDA_DELTA = 0.5    # start with 0.3~1.0 and tune
+@dataclass(frozen=True)
+class Config:
+    data: DataConfig = field(default_factory=DataConfig)
+    split: SplitConfig = field(default_factory=SplitConfig)
+    features: FeatureConfig = field(default_factory=FeatureConfig)
+    normalization: NormalizationConfig = field(default_factory=NormalizationConfig)
+    model: ModelConfig = field(default_factory=ModelConfig)
+    training: TrainingConfig = field(default_factory=TrainingConfig)
+    output: OutputConfig = field(default_factory=OutputConfig)
 
-# Loss selection (maintainable; main.py must not manage per-loss params)
-LOSS_NAME = "masked_mse"
 
-LOSS_PARAMS = {
-    "masked_mse": {
-        "reduction": "mean",
-    }
-}
-
-# --------------------------------------------------
-# Test exports
-# --------------------------------------------------
-TEST_EXPORT_DIRNAME = "test_exports"
-TEST_EXPORT_ROOT = RESULTS_ROOT / TEST_EXPORT_DIRNAME
-TEST_EXPORT_ROOT.mkdir(parents=True, exist_ok=True)
-
-# Choose model: "cnn", "tf_fusion", "spike_mixture", "film_cnn", "refiner_cnn", "lstm", "graph_wavenet_no_adj", "arima"
-MODEL_NAME = "refiner_cnn"
-
-# Model-specific kwargs. Only the selected model will use its own kwargs.
-MODEL_KWARGS = {
-    "cnn": {
-        # keep empty or add cnn-specific options later
-    },
-    "tf_fusion": {
-        "use_log_mag": False,
-        "use_attention_pool": False,
-        "pool_type": "max",
-        "hidden": 64,
-    },
-    "spike_mixture": {
-        "hidden": 64,
-        "delta_scale": 2.0,   # if target normalized; try 2.0 -> 3.0
-        "pool_type": "max",
-        "topk": 4,
-        "use_topk_pool": True,
-    },
-    "film_cnn": {
-        "hidden": 64,
-        "cond_dim": 8,
-        "topk": 4,
-    },
-    "refiner_cnn": {
-            "hidden": 64,
-            "topk": 4,
-            # delta_scale is optional; if omitted, factory uses var_scale computed in main
-            # "delta_scale": 2.0,
-        },
-    "arima": {
-        "order": (8, 0, 1),
-        "min_obs": 80,
-        "fallback": "last",
-        "verbose": True,
-    },
-}
+CFG = Config()
+CFG.output.output_dir.mkdir(parents=True, exist_ok=True)
