@@ -79,7 +79,7 @@ outputs/
 The implemented model is `DualBranchSTGCNN`, defined in:
 
 ```text
-src/models/dual_branch_stgcnn.py
+src/model/dual_branch_stgcnn.py
 ```
 
 Input shape:
